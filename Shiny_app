@@ -1,0 +1,94 @@
+
+library(shiny)
+library(qgraph)
+library(mgm)
+setwd("~/Master/Semester 2/SEM2")
+Data <- read.csv(file = "Data.csv", header = TRUE)
+Data_time <- read.csv("Data_time.csv", header = TRUE)
+# data("symptom_data")
+# Data <- symptom_data$data
+# Data$time <- 1:nrow(Data)
+# Data_time <- symptom_data$data_time
+colors = c("red", "blue", "yellow", "green", "coral", "pink", "purple", "lightgoldenrod", "orange", "mediumaquamarine")
+
+# Define UI for application that draws a histogram
+ui <- fluidPage(
+   
+   # Application title
+   titlePanel("Example"),
+   
+   # Sidebar with a slider input for number of bins 
+   fluidRow(
+     column(4,
+      wellPanel(
+         sliderInput(inputId = "time",
+                     label = "Timepoints",
+                     min = 20,
+                     max = 50,
+                     value = 1)
+      ),
+      
+      selectInput(inputId = "variables", label = "number of variables",choices = 2:10, selected = 1)
+   ),
+      
+      # Show a plot of the generated distribution
+   column(8,   
+   wellPanel(
+        tabsetPanel(
+          tabPanel("Lines", plotOutput("graph")),
+          tabPanel("Network",plotOutput("plot"))
+        )))
+         
+         
+      )
+   )
+
+# Define server logic required to draw a histogram
+server <- function(input, output) {
+  
+  
+   
+   output$graph <- renderPlot({
+      
+      x    <- Data[1:input$time,12]
+      y <- Data[1:input$time,1]
+      
+      
+      plot(x, y,  type = "l", ylim = c(0,7), col = colors[1])
+      if(input$variables > 1){
+        for(i in 2:input$variables){
+          lines(Data[1:input$time,12], Data[1:input$time,i], col = colors[i])
+        }
+        lines(i)
+        
+      }
+   })
+   
+   output$plot <- renderPlot({
+     mvar_obj <- mvar(data = Data[,1:input$variables],
+                      type = rep("g", input$variables),
+                      level = rep(1, input$variables),
+                      lambdaSel = "EBIC",
+                      lambdaGam = 0,
+                      lags = 1,
+                      beepvar = Data_time$beepno,
+                      dayvar = Data_time$dayno,
+                      pbar=FALSE,
+                      saveData = TRUE)
+     
+     
+     
+     qgraph(t(mvar_obj$wadj[, , 1]),
+            edge.color = t(mvar_obj$edgecolor[, , 1]), 
+            layout="circle", border.color = colors[1:input$variables],
+            label.color = colors[1:input$variables], mar = c(5,5,5,5))
+     
+     
+   })
+   
+   
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
